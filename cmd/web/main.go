@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // define an application struct to hold application wide dependencies for the web application
@@ -15,22 +18,37 @@ type application struct {
 
 func main() {
 	addr := flag.String("addr", ":4000", "HTTP Network Address")
-
+	dsn := flag.String("dns", "web:hiphop@/snippetbox?parseTime=true", "mysql DSN string")
+	flag.Parse()
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
-
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+	db, err := DBopen(*dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+	defer db.Close()
 	app := &application{
-		errorLog: errLog,
+		errorLog: errorLog,
 		infoLog:  infoLog,
 	}
 
-	flag.Parse()
 	srv := &http.Server{
 		Addr:     *addr,
-		ErrorLog: errLog,
+		ErrorLog: errorLog,
 		Handler:  app.routes(),
 	}
 	infoLog.Printf("Starting server on %s", *addr)
-	err := srv.ListenAndServe()
-	errLog.Fatal(err)
+	err = srv.ListenAndServe()
+	errorLog.Fatal(err)
+}
+func DBopen(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
