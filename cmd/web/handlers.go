@@ -28,10 +28,11 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFound(w)
 		return
 	}
 	fmt.Fprintf(w, "Display a specific snippet with ID %d...", id)
@@ -42,5 +43,13 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 		app.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
-	w.Write([]byte("create something"))
+	title := "oz the wizzard"
+	content := "he fell in a pond and then shark ate him. Well, i dont know why was there a shark in the pond."
+	expired := "7"
+	id, err := app.snippets.Insert(title, content, expired)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
 }
