@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"database/sql"
-	"fmt"
 	"megatroncodrr/snippetbox/pkg/models"
 )
 
@@ -67,6 +66,5 @@ func (m *SnippetModel) Latest() ([]*models.Snippet, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	fmt.Printf("rows : \t %v", snippets)
 	return snippets, nil
 }

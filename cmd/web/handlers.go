@@ -1,32 +1,39 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"html/template"
 	"megatroncodrr/snippetbox/pkg/models"
 	"net/http"
 	"strconv"
 )
 
+func (app *application) render(w http.ResponseWriter, r *http.Request, name string, data *templateData) {
+	ts, ok := app.templateCache[name]
+	if !ok {
+		app.errorLog.Printf("no such Template %s exist", name)
+		return
+	}
+	buff := &bytes.Buffer{}
+	err := ts.Execute(buff, data)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	buff.WriteTo(w)
+}
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		app.notFound(w)
 		return
 	}
-	files := []string{
-		"./ui/html/home.page.tmpl",
-		"./ui/html/base.layout.tmpl",
-	}
-	ts, err := template.ParseFiles(files...)
+	s, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
-	err = ts.Execute(w, nil)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
+	data := &templateData{Snippets: s}
+	app.render(w, r, "home.page.tmpl", data)
 }
 
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
@@ -44,20 +51,8 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, err)
 		return
 	}
-	files := []string{
-		"./ui/html/show.page.tmpl",
-		"./ui/html/base.layout.tmpl",
-	}
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-	err = ts.Execute(w, s)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
+	data := &templateData{Snippet: s}
+	app.render(w, r, "show.page.tmpl", data)
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
